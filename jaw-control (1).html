@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Jaw Control Rig</title>
+<style>
+  :root {
+    --bg: #14161a;
+    --panel: #1d2025;
+    --panel-raised: #24282f;
+    --line: #34393f;
+    --brass: #c98a4b;
+    --brass-bright: #e2a765;
+    --led-green: #6ab04c;
+    --led-red: #c05a4f;
+    --text: #e8e6e1;
+    --text-dim: #8b8f96;
+    --mono: 'IBM Plex Mono', 'Courier New', monospace;
+    --display: 'Oswald', 'Arial Narrow', sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    margin: 0;
+    padding: 32px 20px;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(201,138,75,0.05), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(201,138,75,0.04), transparent 40%);
+  }
+
+  .rig {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 22px;
+    margin: 0;
+    color: var(--text);
+  }
+
+  h1 span { color: var(--brass); }
+
+  .subtitle {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 18px;
+  }
+
+  .panel-label {
+    font-family: var(--display);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-label .num {
+    color: var(--brass);
+    font-family: var(--mono);
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .row:last-child { margin-bottom: 0; }
+
+  button {
+    background: var(--panel-raised);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 9px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  button:hover:not(:disabled) {
+    border-color: var(--brass);
+    color: var(--brass-bright);
+  }
+  button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  button.primary {
+    border-color: var(--brass);
+    color: var(--brass-bright);
+  }
+
+  input[type="file"] {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    max-width: 240px;
+  }
+
+  input[type="number"] {
+    background: var(--panel-raised);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-family: var(--mono);
+    padding: 6px 8px;
+    width: 64px;
+    border-radius: 3px;
+  }
+
+  input[type="range"] {
+    flex: 1;
+    accent-color: var(--brass);
+  }
+
+  label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    min-width: 90px;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--led-red);
+    display: inline-block;
+    box-shadow: 0 0 6px rgba(192,90,79,0.6);
+  }
+  .status-dot.on {
+    background: var(--led-green);
+    box-shadow: 0 0 8px rgba(106,176,76,0.7);
+  }
+
+  .status-text {
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  /* --- Dial: styled after a servo horn sweep --- */
+  .dial-wrap {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+  }
+
+  .dial-readout {
+    flex: 1;
+  }
+
+  .readout-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  .readout-value {
+    font-family: var(--display);
+    font-size: 42px;
+    color: var(--brass-bright);
+    line-height: 1;
+    letter-spacing: 0.02em;
+  }
+
+  .readout-value .unit {
+    font-family: var(--mono);
+    font-size: 16px;
+    color: var(--text-dim);
+    margin-left: 4px;
+  }
+
+  .meter-track {
+    width: 100%;
+    height: 6px;
+    background: var(--panel-raised);
+    border-radius: 3px;
+    margin-top: 10px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+  }
+
+  .meter-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #7a5230, var(--brass), var(--brass-bright));
+    transition: width 0.05s linear;
+  }
+
+  .log {
+    font-size: 11px;
+    color: var(--text-dim);
+    max-height: 100px;
+    overflow-y: auto;
+    line-height: 1.6;
+  }
+  .log div:last-child { color: var(--text); }
+
+  .hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+  .hint b { color: var(--brass); }
+</style>
+</head>
+<body>
+<div class="rig">
+
+  <header>
+    <div>
+      <h1>Jaw <span>Control</span> Rig</h1>
+      <div class="subtitle">Audio-reactive servo driver — Web Serial</div>
+    </div>
+  </header>
+
+  <div class="panel">
+    <div class="panel-label"><span class="num">01</span> Connection</div>
+    <div class="row">
+      <span class="status-dot" id="serialDot"></span>
+      <span class="status-text" id="serialStatus">Not connected</span>
+      <button id="connectBtn">Connect Arduino</button>
+      <button id="disconnectBtn" disabled>Disconnect</button>
+      <label style="min-width:auto;">Baud</label>
+      <input type="number" id="baudRate" value="9600">
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label"><span class="num">02</span> Audio Source</div>
+    <div class="row">
+      <input type="file" id="audioFile" accept="audio/*">
+      <button id="playBtn" disabled>Play</button>
+      <button id="stopBtn" disabled>Stop</button>
+    </div>
+    <div class="row">
+      <label>Output</label>
+      <select id="audioOutputSelect" style="background:var(--panel-raised); color:var(--text); border:1px solid var(--line); border-radius:3px; padding:6px; font-family:var(--mono); min-width:200px;"></select>
+      <button id="refreshOutputsBtn">Refresh devices</button>
+      <button id="grantPermissionBtn">Show all devices</button>
+    </div>
+    <audio id="audioEl" style="display:none;"></audio>
+    <div class="hint">Only applies to the file-playback audio above. The built-in TTS voice (panel 03) plays through your OS's default output device — browsers don't currently allow picking a device for it via code. Chrome/Edge only. If you're missing devices (e.g. monitor speakers, a virtual cable), click <b>Show all devices</b> — Chrome hides most output devices and their real names until a page has been granted microphone access at least once, even though none of your audio is actually recorded or sent anywhere.</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label"><span class="num">03</span> Text-to-Speech (free, built-in)</div>
+    <div class="row">
+      <label>Voice</label>
+      <select id="ttsVoice" style="background:var(--panel-raised); color:var(--text); border:1px solid var(--line); border-radius:3px; padding:6px; font-family:var(--mono); min-width:200px;"></select>
+    </div>
+    <div class="row">
+      <textarea id="ttsText" rows="3" placeholder="Type what the head should say..."
+        style="flex:1; background:var(--panel-raised); border:1px solid var(--line); color:var(--text); font-family:var(--mono); border-radius:3px; padding:8px; resize:vertical;"></textarea>
+    </div>
+    <div class="row">
+      <button id="ttsGenerateBtn" class="primary">Speak</button>
+      <button id="ttsStopBtn">Stop</button>
+      <span class="status-text" id="ttsStatus"></span>
+    </div>
+    <div class="hint">Uses your browser/OS's built-in speech synthesis - no API key, no cost, works offline. Since it doesn't expose raw audio samples, the jaw is driven by word-boundary timing (opens per word, decays between) rather than true volume - looks convincing in practice, just isn't literally amplitude-based like the file-upload path above. It's also timer-based rather than audio-thread-based, so unlike file playback, movement may lag if you switch away from this tab mid-sentence.</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label"><span class="num">04</span> Discord Bridge (auto-speak)</div>
+    <div class="row">
+      <span class="status-dot" id="discordDot"></span>
+      <span class="status-text" id="discordStatus">Not connected</span>
+      <input type="text" id="discordUrl" value="ws://localhost:8765" style="flex:1; min-width:180px; background:var(--panel-raised); border:1px solid var(--line); color:var(--text); font-family:var(--mono); border-radius:3px; padding:6px 8px;">
+      <button id="discordConnectBtn">Connect</button>
+      <button id="discordDisconnectBtn" disabled>Disconnect</button>
+    </div>
+    <div class="hint">Connects to the separate Discord bridge script (<b>discord-bridge/index.js</b>) running locally. When it detects someone joining a voice channel, it sends a message here and the head speaks automatically using the voice/settings above - no button press needed.</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label"><span class="num">05</span> Calibration</div>
+    <div class="row">
+      <label>Jaw closed</label>
+      <input type="range" id="angleMin" min="0" max="180" value="20">
+      <input type="number" id="angleMinNum" min="0" max="180" value="20">
+      <span>°</span>
+    </div>
+    <div class="row">
+      <label>Jaw open</label>
+      <input type="range" id="angleMax" min="0" max="180" value="70">
+      <input type="number" id="angleMaxNum" min="0" max="180" value="70">
+      <span>°</span>
+    </div>
+    <div class="row">
+      <label>Smoothing</label>
+      <input type="range" id="smoothing" min="0" max="0.95" step="0.05" value="0.6">
+      <span id="smoothingVal">0.60</span>
+    </div>
+    <div class="row">
+      <label>Sensitivity</label>
+      <input type="range" id="gain" min="0.5" max="5" step="0.1" value="1.8">
+      <span id="gainVal">1.8x</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label"><span class="num">06</span> Live Output</div>
+    <div class="dial-wrap">
+      <div class="dial-readout">
+        <div class="readout-line"><span>Servo angle</span><span id="hzOut">0 msgs/s</span></div>
+        <div class="readout-value"><span id="angleReadout">0</span><span class="unit">deg</span></div>
+        <div class="meter-track"><div class="meter-fill" id="meterFill"></div></div>
+      </div>
+    </div>
+    <div class="hint">Sent to Arduino as plain text, one line per update: <b>e.g. "52\n"</b>. Throttled to ~20 updates/sec regardless of audio analysis rate.</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label"><span class="num">07</span> Log</div>
+    <div class="log" id="log"></div>
+  </div>
+
+</div>
+
+<script>
+let port, writer, reader;
+let audioCtx, sourceNode, workletNode, silentGain;
+let smoothedVolume = 0;
+let lastSendTime = 0;
+let sendCount = 0;
+let lastHzCheck = performance.now();
+const SEND_INTERVAL_MS = 50; // ~20/sec, keeps working even when tab is backgrounded
+
+// Runs on the audio rendering thread, not the main thread - so it keeps
+// computing volume even when the tab is unfocused or backgrounded, unlike
+// the old requestAnimationFrame-driven loop.
+const WORKLET_CODE = `
+  class VolumeProcessor extends AudioWorkletProcessor {
+    process(inputs) {
+      const input = inputs[0];
+      if (input.length > 0 && input[0].length > 0) {
+        const channelData = input[0];
+        let sumSquares = 0;
+        for (let i = 0; i < channelData.length; i++) {
+          sumSquares += channelData[i] * channelData[i];
+        }
+        const rms = Math.sqrt(sumSquares / channelData.length);
+        this.port.postMessage(rms);
+      }
+      return true;
+    }
+  }
+  registerProcessor('volume-processor', VolumeProcessor);
+`;
+
+const els = {
+  connectBtn: document.getElementById('connectBtn'),
+  disconnectBtn: document.getElementById('disconnectBtn'),
+  serialDot: document.getElementById('serialDot'),
+  serialStatus: document.getElementById('serialStatus'),
+  baudRate: document.getElementById('baudRate'),
+  audioFile: document.getElementById('audioFile'),
+  playBtn: document.getElementById('playBtn'),
+  stopBtn: document.getElementById('stopBtn'),
+  audioEl: document.getElementById('audioEl'),
+  audioOutputSelect: document.getElementById('audioOutputSelect'),
+  refreshOutputsBtn: document.getElementById('refreshOutputsBtn'),
+  grantPermissionBtn: document.getElementById('grantPermissionBtn'),
+  angleMin: document.getElementById('angleMin'),
+  angleMax: document.getElementById('angleMax'),
+  angleMinNum: document.getElementById('angleMinNum'),
+  angleMaxNum: document.getElementById('angleMaxNum'),
+  smoothing: document.getElementById('smoothing'),
+  smoothingVal: document.getElementById('smoothingVal'),
+  gain: document.getElementById('gain'),
+  gainVal: document.getElementById('gainVal'),
+  ttsVoice: document.getElementById('ttsVoice'),
+  ttsText: document.getElementById('ttsText'),
+  ttsGenerateBtn: document.getElementById('ttsGenerateBtn'),
+  ttsStopBtn: document.getElementById('ttsStopBtn'),
+  ttsStatus: document.getElementById('ttsStatus'),
+  discordDot: document.getElementById('discordDot'),
+  discordStatus: document.getElementById('discordStatus'),
+  discordUrl: document.getElementById('discordUrl'),
+  discordConnectBtn: document.getElementById('discordConnectBtn'),
+  discordDisconnectBtn: document.getElementById('discordDisconnectBtn'),
+  angleReadout: document.getElementById('angleReadout'),
+  meterFill: document.getElementById('meterFill'),
+  hzOut: document.getElementById('hzOut'),
+  log: document.getElementById('log'),
+};
+
+function logMsg(msg) {
+  const d = document.createElement('div');
+  d.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  els.log.appendChild(d);
+  els.log.scrollTop = els.log.scrollHeight;
+}
+
+// --- Serial connection ---
+els.connectBtn.addEventListener('click', async () => {
+  if (!('serial' in navigator)) {
+    logMsg('Web Serial not supported. Use Chrome or Edge, and open this file directly (not inside an embedded preview).');
+    return;
+  }
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: parseInt(els.baudRate.value) });
+    writer = port.writable.getWriter();
+    els.serialDot.classList.add('on');
+    els.serialStatus.textContent = 'Connected';
+    els.connectBtn.disabled = true;
+    els.disconnectBtn.disabled = false;
+    logMsg('Serial port connected at ' + els.baudRate.value + ' baud.');
+  } catch (err) {
+    logMsg('Connection failed: ' + err.message);
+  }
+});
+
+els.disconnectBtn.addEventListener('click', async () => {
+  try {
+    if (writer) { await writer.close(); writer = null; }
+    if (port) { await port.close(); port = null; }
+  } catch (err) {
+    logMsg('Disconnect error: ' + err.message);
+  }
+  els.serialDot.classList.remove('on');
+  els.serialStatus.textContent = 'Not connected';
+  els.connectBtn.disabled = false;
+  els.disconnectBtn.disabled = true;
+  logMsg('Disconnected.');
+});
+
+async function sendAngle(angle) {
+  if (!writer) return;
+  const encoder = new TextEncoder();
+  await writer.write(encoder.encode(angle + '\n'));
+}
+
+// --- Audio output device selection ---
+// Lists available speakers/headphones and lets file playback (panel 02) be
+// routed to a specific one via AudioContext.setSinkId(). Device labels only
+// show up once the browser has granted some media permission (even just
+// having clicked "Connect Arduino" or similar counts in some browsers) -
+// otherwise they show as blank/generic until then.
+async function populateAudioOutputs() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+    logMsg('This browser does not support listing audio output devices.');
+    els.audioOutputSelect.innerHTML = '<option value="">Not supported</option>';
+    return;
+  }
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const outputs = devices.filter((d) => d.kind === 'audiooutput');
+    const previousValue = els.audioOutputSelect.value;
+    els.audioOutputSelect.innerHTML = '';
+
+    if (outputs.length === 0) {
+      els.audioOutputSelect.innerHTML = '<option value="">Default device</option>';
+      return;
+    }
+
+    outputs.forEach((d, i) => {
+      const opt = document.createElement('option');
+      opt.value = d.deviceId;
+      opt.textContent = d.label || `Output device ${i + 1}`;
+      els.audioOutputSelect.appendChild(opt);
+    });
+
+    // Keep whatever was selected before, if it still exists in the new list
+    if ([...els.audioOutputSelect.options].some((o) => o.value === previousValue)) {
+      els.audioOutputSelect.value = previousValue;
+    }
+  } catch (err) {
+    logMsg('Could not list audio output devices: ' + err.message);
+  }
+}
+
+async function applySelectedOutput() {
+  const deviceId = els.audioOutputSelect.value;
+  if (!deviceId || !audioCtx) return;
+  if (typeof audioCtx.setSinkId !== 'function') {
+    logMsg('This browser does not support switching audio output devices (AudioContext.setSinkId unsupported).');
+    return;
+  }
+  try {
+    await audioCtx.setSinkId(deviceId);
+    logMsg('Audio output set to: ' + (els.audioOutputSelect.selectedOptions[0]?.textContent || deviceId));
+  } catch (err) {
+    logMsg('Failed to switch output device: ' + err.message);
+  }
+}
+
+async function requestFullDeviceList() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    logMsg('This browser does not support requesting media permissions.');
+    return;
+  }
+  try {
+    // We don't need the mic at all - this is purely to unlock Chrome's full,
+    // labeled list of output devices. The stream is stopped immediately.
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((track) => track.stop());
+    logMsg('Permission granted - refreshing device list.');
+    await populateAudioOutputs();
+  } catch (err) {
+    logMsg('Permission request failed or was denied: ' + err.message);
+  }
+}
+
+els.audioOutputSelect.addEventListener('change', applySelectedOutput);
+els.refreshOutputsBtn.addEventListener('click', populateAudioOutputs);
+els.grantPermissionBtn.addEventListener('click', requestFullDeviceList);
+if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+  navigator.mediaDevices.addEventListener('devicechange', populateAudioOutputs);
+}
+populateAudioOutputs();
+
+// --- Audio loading ---
+els.audioFile.addEventListener('change', () => {
+  const file = els.audioFile.files[0];
+  if (!file) return;
+  els.audioEl.src = URL.createObjectURL(file);
+  els.playBtn.disabled = false;
+  logMsg('Loaded audio file: ' + file.name);
+});
+
+let audioGraphReady = null;
+
+async function ensureAudioGraph() {
+  if (audioGraphReady) return audioGraphReady;
+  audioGraphReady = (async () => {
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      await applySelectedOutput();
+      sourceNode = audioCtx.createMediaElementSource(els.audioEl);
+
+      try {
+        // Preferred path: AudioWorklet, runs on the audio thread so it
+        // keeps working even in a backgrounded tab.
+        const blob = new Blob([WORKLET_CODE], { type: 'application/javascript' });
+        const workletURL = URL.createObjectURL(blob);
+        await audioCtx.audioWorklet.addModule(workletURL);
+
+        workletNode = new AudioWorkletNode(audioCtx, 'volume-processor');
+        workletNode.port.onmessage = handleVolumeMessage;
+
+        silentGain = audioCtx.createGain();
+        silentGain.gain.value = 0;
+
+        sourceNode.connect(audioCtx.destination);
+        sourceNode.connect(workletNode);
+        workletNode.connect(silentGain);
+        silentGain.connect(audioCtx.destination);
+
+        logMsg('Audio graph ready (AudioWorklet).');
+      } catch (workletErr) {
+        // Fallback: ScriptProcessorNode. Deprecated, but widely supported
+        // and still runs off the audio thread's own schedule.
+        logMsg('AudioWorklet unavailable (' + workletErr.message + '), falling back to ScriptProcessorNode.');
+        const processor = audioCtx.createScriptProcessor(2048, 1, 1);
+        processor.onaudioprocess = (e) => {
+          const channelData = e.inputBuffer.getChannelData(0);
+          let sumSquares = 0;
+          for (let i = 0; i < channelData.length; i++) {
+            sumSquares += channelData[i] * channelData[i];
+          }
+          const rms = Math.sqrt(sumSquares / channelData.length);
+          handleVolumeMessage({ data: rms });
+        };
+        sourceNode.connect(audioCtx.destination);
+        sourceNode.connect(processor);
+        const fallbackSilentGain = audioCtx.createGain();
+        fallbackSilentGain.gain.value = 0;
+        processor.connect(fallbackSilentGain);
+        fallbackSilentGain.connect(audioCtx.destination);
+        logMsg('Audio graph ready (ScriptProcessorNode fallback).');
+      }
+    } catch (err) {
+      audioGraphReady = null; // allow retry instead of caching a dead graph
+      throw err;
+    }
+  })();
+  return audioGraphReady;
+}
+
+els.playBtn.addEventListener('click', async () => {
+  try {
+    await ensureAudioGraph();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+    els.audioEl.play();
+    els.stopBtn.disabled = false;
+    logMsg('Playing.');
+  } catch (err) {
+    logMsg('Playback failed: ' + err.message);
+  }
+});
+
+els.stopBtn.addEventListener('click', () => {
+  els.audioEl.pause();
+  els.audioEl.currentTime = 0;
+  logMsg('Stopped.');
+});
+
+// --- Text-to-speech: free, browser-native SpeechSynthesis. It doesn't
+// expose raw audio samples, so instead of true amplitude we drive the jaw
+// off word-boundary events with a decay curve between them - opens per
+// word, eases shut in the gaps. Runs on a timer (not the audio thread), so
+// it can lag if you switch tabs mid-sentence, unlike the file-upload path.
+let synthVolume = 0;
+let synthDecayTimer = null;
+
+function populateVoiceList() {
+  const voices = speechSynthesis.getVoices();
+  els.ttsVoice.innerHTML = '';
+  voices.forEach((v, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = v.name + ' (' + v.lang + ')';
+    els.ttsVoice.appendChild(opt);
+  });
+}
+populateVoiceList();
+if ('onvoiceschanged' in speechSynthesis) {
+  speechSynthesis.onvoiceschanged = populateVoiceList;
+}
+
+function startSynthDecayLoop() {
+  if (synthDecayTimer) return;
+  synthDecayTimer = setInterval(() => {
+    synthVolume *= 0.75; // ease toward closed between word boundaries
+    const angleMin = parseInt(els.angleMin.value);
+    const angleMax = parseInt(els.angleMax.value);
+    const angle = Math.round(angleMin + synthVolume * (angleMax - angleMin));
+    sendAngle(angle);
+    els.angleReadout.textContent = angle;
+    els.meterFill.style.width = (synthVolume * 100) + '%';
+  }, 40);
+}
+
+function stopSynthDecayLoop() {
+  if (synthDecayTimer) { clearInterval(synthDecayTimer); synthDecayTimer = null; }
+  synthVolume = 0;
+  const angleMin = parseInt(els.angleMin.value);
+  sendAngle(angleMin);
+  els.angleReadout.textContent = angleMin;
+  els.meterFill.style.width = '0%';
+}
+
+function speak(text) {
+  if (!text) return;
+  speechSynthesis.cancel(); // clear any queued/previous utterance
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  const voices = speechSynthesis.getVoices();
+  const chosen = voices[parseInt(els.ttsVoice.value)];
+  if (chosen) utterance.voice = chosen;
+
+  utterance.onstart = () => {
+    els.ttsStatus.textContent = 'Speaking.';
+    startSynthDecayLoop();
+    logMsg('Speaking: "' + text.slice(0, 60) + (text.length > 60 ? '...' : '') + '"');
+  };
+  utterance.onboundary = () => {
+    synthVolume = 1.0; // spike on each word/character boundary, decays via the timer loop
+  };
+  utterance.onend = () => {
+    els.ttsStatus.textContent = 'Done.';
+    stopSynthDecayLoop();
+  };
+  utterance.onerror = (e) => {
+    els.ttsStatus.textContent = 'Failed - see log.';
+    logMsg('Speech synthesis error: ' + e.error);
+    stopSynthDecayLoop();
+  };
+
+  speechSynthesis.speak(utterance);
+}
+
+els.ttsGenerateBtn.addEventListener('click', () => {
+  const text = els.ttsText.value.trim();
+  if (!text) { els.ttsStatus.textContent = 'Type something to say first.'; return; }
+  speak(text);
+});
+
+els.ttsStopBtn.addEventListener('click', () => {
+  speechSynthesis.cancel();
+  stopSynthDecayLoop();
+  els.ttsStatus.textContent = 'Stopped.';
+});
+
+// --- Discord bridge: connects to the local discord-bridge/index.js script
+// and speaks automatically whenever it relays a voice-channel-join event.
+let discordSocket = null;
+let discordRetryTimer = null;
+
+function connectDiscordBridge() {
+  const url = els.discordUrl.value.trim();
+  if (!url) return;
+
+  clearTimeout(discordRetryTimer);
+  els.discordStatus.textContent = 'Connecting...';
+
+  try {
+    discordSocket = new WebSocket(url);
+  } catch (err) {
+    logMsg('Discord bridge connection error: ' + err.message);
+    els.discordStatus.textContent = 'Connection failed.';
+    return;
+  }
+
+  discordSocket.onopen = () => {
+    els.discordDot.classList.add('on');
+    els.discordStatus.textContent = 'Connected';
+    els.discordConnectBtn.disabled = true;
+    els.discordDisconnectBtn.disabled = false;
+    logMsg('Discord bridge connected: ' + url);
+  };
+
+  discordSocket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === 'speak' && data.text) {
+        logMsg('Discord event received: "' + data.text + '"');
+        speak(data.text);
+      }
+    } catch (err) {
+      logMsg('Discord bridge message parse error: ' + err.message);
+    }
+  };
+
+  discordSocket.onclose = () => {
+    els.discordDot.classList.remove('on');
+    els.discordStatus.textContent = 'Disconnected';
+    els.discordConnectBtn.disabled = false;
+    els.discordDisconnectBtn.disabled = true;
+  };
+
+  discordSocket.onerror = () => {
+    logMsg('Discord bridge socket error - is discord-bridge/index.js running?');
+  };
+}
+
+els.discordConnectBtn.addEventListener('click', connectDiscordBridge);
+
+els.discordDisconnectBtn.addEventListener('click', () => {
+  if (discordSocket) discordSocket.close();
+  clearTimeout(discordRetryTimer);
+});
+
+// --- Analysis + servo mapping, driven by the audio worklet ---
+// This fires on the audio thread's schedule (hundreds of times/sec), so it
+// keeps running - and keeps sending serial updates - even when the tab is
+// unfocused or backgrounded, which requestAnimationFrame does not.
+function handleVolumeMessage(event) {
+  const rms = event.data;
+  const gain = parseFloat(els.gain.value);
+  const boosted = Math.min(1, rms * gain * 4); // *4 baseline so default gain feels responsive
+
+  const smoothing = parseFloat(els.smoothing.value);
+  smoothedVolume = smoothing * smoothedVolume + (1 - smoothing) * boosted;
+
+  const angleMin = parseInt(els.angleMin.value);
+  const angleMax = parseInt(els.angleMax.value);
+  const angle = Math.round(angleMin + smoothedVolume * (angleMax - angleMin));
+
+  const now = performance.now();
+  if (now - lastSendTime >= SEND_INTERVAL_MS) {
+    sendAngle(angle);
+    els.angleReadout.textContent = angle;
+    els.meterFill.style.width = (smoothedVolume * 100) + '%';
+    lastSendTime = now;
+    sendCount++;
+  }
+  if (now - lastHzCheck >= 1000) {
+    els.hzOut.textContent = sendCount + ' msgs/s';
+    sendCount = 0;
+    lastHzCheck = now;
+  }
+}
+
+// --- Calibration UI syncing ---
+function syncPair(range, num) {
+  range.addEventListener('input', () => num.value = range.value);
+  num.addEventListener('input', () => range.value = num.value);
+}
+syncPair(els.angleMin, els.angleMinNum);
+syncPair(els.angleMax, els.angleMaxNum);
+
+els.smoothing.addEventListener('input', () => {
+  els.smoothingVal.textContent = parseFloat(els.smoothing.value).toFixed(2);
+});
+els.gain.addEventListener('input', () => {
+  els.gainVal.textContent = parseFloat(els.gain.value).toFixed(1) + 'x';
+});
+</script>
+</body>
+</html>
